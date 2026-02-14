@@ -2,82 +2,111 @@ pipeline {
     agent any
 
     environment {
-        // Change these to your actual names
-        DOCKERHUB_USER = "sharmajikechhotebete" 
+        DOCKERHUB_USER = "sharmajikechhotebete"
         APP_NAME       = "mern-app"
         AWS_REGION     = "us-east-1"
         CLUSTER_NAME   = "mern-devops-cluster"
-        
-        // Dynamic image tags using Jenkins Build Number
+
         BACKEND_IMAGE  = "${DOCKERHUB_USER}/${APP_NAME}-backend:${BUILD_NUMBER}"
         FRONTEND_IMAGE = "${DOCKERHUB_USER}/${APP_NAME}-frontend:${BUILD_NUMBER}"
+
+        BACKEND_URL = "http://a35de4649e77d4657be95b923d8dfe83-311472493.us-east-1.elb.amazonaws.com:5000"
     }
 
     stages {
-        stage('Checkout') {
+
+        stage('Clean Workspace') {
             steps {
-                // Pulls code from your GitHub repo
+                deleteDir()
+            }
+        }
+
+        stage('Checkout Code') {
+            steps {
                 checkout scm
             }
         }
 
-     stage('Docker Build') {
-    steps {
-        script {
-            def backendUrl = "http://a35de4649e77d4657be95b923d8dfe83-311472493.us-east-1.elb.amazonaws.com:5000"
-            
-            echo "FORCE BUILDING FRONTEND: ${backendUrl}"
-            // --no-cache is MANDATORY here to break the cycle
-            sh "docker build --no-cache --build-arg REACT_APP_API_URL=${backendUrl} -t sharmajikechhotebete/mern-app-frontend:${BUILD_NUMBER} ./frontend"
-            
-            sh "docker build -t sharmajikechhotebete/mern-app-backend:${BUILD_NUMBER} ./backend"
-        }
-    }
-}
-
-        stage('Push to Docker Hub') {
+        stage('Build Docker Images') {
             steps {
-                // Uses the 'docker-hub-creds' we created in the Jenkins UI
-                withCredentials([usernamePassword(credentialsId: 'dockerhub-auth', passwordVariable: 'PASS', usernameVariable: 'USER')]) {
-                    sh "echo $PASS | docker login -u $USER --password-stdin"
-                    sh "docker push ${BACKEND_IMAGE}"
-                    sh "docker push ${FRONTEND_IMAGE}"
+                script {
+                    echo "Building images with API URL: ${BACKEND_URL}"
+
+                    sh """
+                    docker build --no-cache \
+                      --build-arg REACT_APP_API_URL=${BACKEND_URL} \
+                      -t ${FRONTEND_IMAGE} ./frontend
+                    """
+
+                    sh """
+                    docker build --no-cache \
+                      -t ${BACKEND_IMAGE} ./backend
+                    """
                 }
             }
         }
 
-      stage('Deploy to EKS') {
-    steps {
-        withCredentials([aws(accessKeyVariable: 'AK', credentialsId: 'aws-creds', secretKeyVariable: 'SK')]) {
-            sh """
-                # CRITICAL: Re-add these exports
-                export AWS_ACCESS_KEY_ID=${AK}
-                export AWS_SECRET_ACCESS_KEY=${SK}
-                export AWS_DEFAULT_REGION=us-east-1
-                
-                # Now the AWS CLI can actually find the credentials
-                aws eks update-kubeconfig --region us-east-1 --name mern-devops-cluster
-                
-                # Replace the tag placeholders
-                sed -i 's|sharmajikechhotebete/mern-app-backend:IMAGE_TAG|sharmajikechhotebete/mern-app-backend:${BUILD_NUMBER}|g' k8s/backend.yaml
-                sed -i 's|sharmajikechhotebete/mern-app-frontend:IMAGE_TAG|sharmajikechhotebete/mern-app-frontend:${BUILD_NUMBER}|g' k8s/frontend.yaml
-                
-                # Apply and Restart
-                kubectl apply -f k8s/ --validate=false
-                kubectl rollout restart deployment/frontend deployment/backend
-            """
+        stage('Push Images to Docker Hub') {
+            steps {
+                withCredentials([usernamePassword(
+                    credentialsId: 'dockerhub-auth',
+                    usernameVariable: 'USER',
+                    passwordVariable: 'PASS'
+                )]) {
+                    sh """
+                    echo $PASS | docker login -u $USER --password-stdin
+                    docker push ${BACKEND_IMAGE}
+                    docker push ${FRONTEND_IMAGE}
+                    """
+                }
+            }
         }
-    }
-}
+
+        stage('Deploy to Kubernetes (EKS)') {
+            steps {
+                withCredentials([aws(
+                    credentialsId: 'aws-creds',
+                    accessKeyVariable: 'AK',
+                    secretKeyVariable: 'SK'
+                )]) {
+                    sh """
+                    export AWS_ACCESS_KEY_ID=${AK}
+                    export AWS_SECRET_ACCESS_KEY=${SK}
+                    export AWS_DEFAULT_REGION=${AWS_REGION}
+
+                    aws eks update-kubeconfig \
+                      --region ${AWS_REGION} \
+                      --name ${CLUSTER_NAME}
+
+                    # Inject new image tags dynamically
+                    sed -i 's|IMAGE_TAG|${BUILD_NUMBER}|g' k8s/backend.yaml
+                    sed -i 's|IMAGE_TAG|${BUILD_NUMBER}|g' k8s/frontend.yaml
+
+                    kubectl apply -f k8s/
+
+                    kubectl rollout restart deployment/backend
+                    kubectl rollout restart deployment/frontend
+
+                    kubectl rollout status deployment/backend
+                    kubectl rollout status deployment/frontend
+                    """
+                }
+            }
+        }
     }
 
     post {
         always {
-            echo "Cleaning up local Docker images to save space..."
+            echo "Cleaning local Docker images..."
             sh "docker rmi ${BACKEND_IMAGE} ${FRONTEND_IMAGE} || true"
         }
+
         success {
-            echo "Successfully deployed Build #${BUILD_NUMBER} to AWS!"
+            echo "Build #${BUILD_NUMBER} deployed successfully 🚀"
+        }
+
+        failure {
+            echo "Pipeline failed ❌"
         }
     }
 }
