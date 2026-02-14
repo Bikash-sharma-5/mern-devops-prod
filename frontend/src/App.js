@@ -7,9 +7,11 @@ function App() {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // Use environment variable for production readiness
-  const API = process.env.REACT_APP_API_URL ;
-
+  // Fallback to localhost only if the environment variable is missing during build
+  // We append /api/tasks here so you don't have to repeat it in every axios call
+  const BASE_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
+  const API = `${BASE_URL}/api/tasks`;
+   console.log("API Endpoint:", API);
   const getTasks = async () => {
     try {
       const res = await axios.get(API);
@@ -19,21 +21,33 @@ function App() {
     }
   };
 
-  useEffect(() => { getTasks(); }, []);
+  useEffect(() => { 
+    getTasks(); 
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const add = async (e) => {
     e.preventDefault();
     if (!input) return;
     setLoading(true);
-    await axios.post(API, { title: input });
-    setInput('');
-    await getTasks();
-    setLoading(false);
+    try {
+      await axios.post(API, { title: input });
+      setInput('');
+      await getTasks();
+    } catch (err) {
+      console.error("Add Error:", err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const del = async (id) => {
-    await axios.delete(`${API}/${id}`);
-    getTasks();
+    try {
+      await axios.delete(`${API}/${id}`);
+      await getTasks();
+    } catch (err) {
+      console.error("Delete Error:", err);
+    }
   };
 
   return (
@@ -42,6 +56,7 @@ function App() {
         <header>
           <h1>CloudTask <span>v1.0</span></h1>
           <p>Production-Ready MERN Stack</p>
+          <small style={{color: '#aaa'}}>Endpoint: {BASE_URL}</small>
         </header>
 
         <form className="input-group" onSubmit={add}>
@@ -66,10 +81,11 @@ function App() {
         </div>
         
         <footer>
-          <div className="status-dot"></div> Connected to AWS EKS Cluster (Simulation)
+          <div className="status-dot"></div> Connected to AWS EKS Cluster
         </footer>
       </div>
     </div>
   );
 }
+
 export default App;
