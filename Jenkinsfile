@@ -45,27 +45,29 @@ pipeline {
         }
 
         stage('Deploy to EKS') {
-            steps {
-                // Uses the 'aws-creds' we created for the IAM user
-                withCredentials([aws(credentialsId: 'aws-creds', accessKeyVariable: 'AWS_ACCESS_KEY_ID', secretKeyVariable: 'AWS_SECRET_ACCESS_KEY')]) {
-                    script {
-                        echo "Connecting to EKS Cluster..."
-                        sh "aws eks update-kubeconfig --region ${AWS_REGION} --name ${CLUSTER_NAME}"
-                        
-                        echo "Updating Manifests and Deploying..."
-                        // We use 'sed' to inject the current build number into our YAML files
-                        sh "sed -i 's|sharmajikechhotebete/mern-backend:IMAGE_TAG|sharmajikechhotebete/mern-app-backend:${BUILD_NUMBER}|g' k8s/backend.yaml"
-                        sh "sed -i 's|sharmajikechhotebete/mern-frontend:IMAGE_TAG|sharmajikechhotebete/mern-app-frontend:${BUILD_NUMBER}|g' k8s/frontend.yaml"
-                        
-                        sh "kubectl apply -f k8s/ --validate=false"
-                        
-                        echo "Verifying Deployment..."
-                        sh "kubectl rollout status deployment/backend"
-                        sh "kubectl rollout status deployment/frontend"
-                    }
-                }
+    steps {
+        withCredentials([aws(credentialsId: 'aws-creds', accessKeyVariable: 'AWS_ACCESS_KEY_ID', secretKeyVariable: 'AWS_SECRET_ACCESS_KEY')]) {
+            script {
+                // This ensures the environment variables are active for the shell
+                sh """
+                    export AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+                    export AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+                    export AWS_DEFAULT_REGION=us-east-1
+
+                    echo "Connecting to EKS Cluster..."
+                    aws eks update-kubeconfig --region us-east-1 --name mern-devops-cluster
+
+                    echo "Updating Manifests..."
+                    sed -i 's|sharmajikechhotebete/mern-backend:IMAGE_TAG|sharmajikechhotebete/mern-app-backend:${BUILD_NUMBER}|g' k8s/backend.yaml
+                    sed -i 's|sharmajikechhotebete/mern-frontend:IMAGE_TAG|sharmajikechhotebete/mern-app-frontend:${BUILD_NUMBER}|g' k8s/frontend.yaml
+
+                    echo "Applying to Cluster..."
+                    kubectl apply -f k8s/ --validate=false
+                """
             }
         }
+    }
+}
     }
 
     post {
