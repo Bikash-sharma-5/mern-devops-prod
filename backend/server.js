@@ -5,7 +5,9 @@ require('dotenv').config();
 
 const app = express();
 app.use(cors({
-  origin: '*' // In production, you should replace '*' with your Frontend LoadBalancer URL
+  origin: '*', // For testing; in production use your Frontend LoadBalancer URL
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  allowedHeaders: ['Content-Type']
 }));
 app.use(express.json());
 
