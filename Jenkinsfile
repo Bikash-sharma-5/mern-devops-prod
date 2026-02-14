@@ -54,10 +54,10 @@ pipeline {
                         
                         echo "Updating Manifests and Deploying..."
                         // We use 'sed' to inject the current build number into our YAML files
-                       sh "sed -i 's|sharmajikechhotebete/mern-backend:IMAGE_TAG|sharmajikechhotebete/mern-app-backend:${BUILD_NUMBER}|g' k8s/backend.yaml"
-sh "sed -i 's|sharmajikechhotebete/mern-frontend:IMAGE_TAG|sharmajikechhotebete/mern-app-frontend:${BUILD_NUMBER}|g' k8s/frontend.yaml"
+                        sh "sed -i 's|sharmajikechhotebete/mern-backend:IMAGE_TAG|sharmajikechhotebete/mern-app-backend:${BUILD_NUMBER}|g' k8s/backend.yaml"
+                        sh "sed -i 's|sharmajikechhotebete/mern-frontend:IMAGE_TAG|sharmajikechhotebete/mern-app-frontend:${BUILD_NUMBER}|g' k8s/frontend.yaml"
                         
-                        sh "kubectl apply -f k8s/"
+                        sh "kubectl apply -f k8s/ --validate=false"
                         
                         echo "Verifying Deployment..."
                         sh "kubectl rollout status deployment/backend"
