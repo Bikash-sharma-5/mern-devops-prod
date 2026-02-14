@@ -44,27 +44,27 @@ pipeline {
             }
         }
 
-        stage('Deploy to EKS') {
+      stage('Deploy to EKS') {
     steps {
-        withCredentials([aws(credentialsId: 'aws-creds', accessKeyVariable: 'AWS_ACCESS_KEY_ID', secretKeyVariable: 'AWS_SECRET_ACCESS_KEY')]) {
-            script {
-                // This ensures the environment variables are active for the shell
-                sh """
-                    export AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
-                    export AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
-                    export AWS_DEFAULT_REGION=us-east-1
+        withCredentials([aws(credentialsId: 'aws-creds', accessKeyVariable: 'AK', secretKeyVariable: 'SK')]) {
+            sh """
+                export AWS_ACCESS_KEY_ID=${AK}
+                export AWS_SECRET_ACCESS_KEY=${SK}
+                export AWS_DEFAULT_REGION=us-east-1
 
-                    echo "Connecting to EKS Cluster..."
-                    aws eks update-kubeconfig --region us-east-1 --name mern-devops-cluster
+                # 1. Force identify check - this must show user/DEVOPS in logs
+                aws sts get-caller-identity
 
-                    echo "Updating Manifests..."
-                    sed -i 's|sharmajikechhotebete/mern-backend:IMAGE_TAG|sharmajikechhotebete/mern-app-backend:${BUILD_NUMBER}|g' k8s/backend.yaml
-                    sed -i 's|sharmajikechhotebete/mern-frontend:IMAGE_TAG|sharmajikechhotebete/mern-app-frontend:${BUILD_NUMBER}|g' k8s/frontend.yaml
+                # 2. Update kubeconfig with the specific 'aws' authenticator
+                aws eks update-kubeconfig --region us-east-1 --name mern-devops-cluster
 
-                    echo "Applying to Cluster..."
-                    kubectl apply -f k8s/ --validate=false
-                """
-            }
+                # 3. Update the YAMLs
+                sed -i 's|sharmajikechhotebete/mern-backend:IMAGE_TAG|sharmajikechhotebete/mern-app-backend:${BUILD_NUMBER}|g' k8s/backend.yaml
+                sed -i 's|sharmajikechhotebete/mern-frontend:IMAGE_TAG|sharmajikechhotebete/mern-app-frontend:${BUILD_NUMBER}|g' k8s/frontend.yaml
+
+                # 4. Apply with the --validate=false flag
+                kubectl apply -f k8s/ --validate=false
+            """
         }
     }
 }
