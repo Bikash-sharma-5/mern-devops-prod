@@ -3,7 +3,7 @@ pipeline {
 
     environment {
         // Change these to your actual names
-        DOCKERHUB_USER = "your_dockerhub_username" 
+        DOCKERHUB_USER = "sharmajikechhotebete" 
         APP_NAME       = "mern-app"
         AWS_REGION     = "us-east-1"
         CLUSTER_NAME   = "mern-devops-cluster"
