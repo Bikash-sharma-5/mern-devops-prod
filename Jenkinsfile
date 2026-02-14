@@ -21,13 +21,15 @@ pipeline {
             }
         }
 
-      stage('Docker Build') {
+     stage('Docker Build') {
     steps {
         script {
-            // Remove any trailing slashes from this URL
             def backendUrl = "http://a35de4649e77d4657be95b923d8dfe83-311472493.us-east-1.elb.amazonaws.com:5000"
             
+            echo "FORCE BUILDING FRONTEND: ${backendUrl}"
+            // --no-cache is MANDATORY here to break the cycle
             sh "docker build --no-cache --build-arg REACT_APP_API_URL=${backendUrl} -t sharmajikechhotebete/mern-app-frontend:${BUILD_NUMBER} ./frontend"
+            
             sh "docker build -t sharmajikechhotebete/mern-app-backend:${BUILD_NUMBER} ./backend"
         }
     }
