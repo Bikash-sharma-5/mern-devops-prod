@@ -50,15 +50,20 @@ pipeline {
     steps {
         withCredentials([aws(accessKeyVariable: 'AK', credentialsId: 'aws-creds', secretKeyVariable: 'SK')]) {
             sh """
+                # CRITICAL: Re-add these exports
+                export AWS_ACCESS_KEY_ID=${AK}
+                export AWS_SECRET_ACCESS_KEY=${SK}
+                export AWS_DEFAULT_REGION=us-east-1
+                
+                # Now the AWS CLI can actually find the credentials
                 aws eks update-kubeconfig --region us-east-1 --name mern-devops-cluster
                 
-                # Replace placeholders with real build numbers
-                sed -i 's|sharmajikechhotebete/mern-app-backend:IMAGE_TAG|${BACKEND_IMAGE}|g' k8s/backend.yaml
-                sed -i 's|sharmajikechhotebete/mern-app-frontend:IMAGE_TAG|${FRONTEND_IMAGE}|g' k8s/frontend.yaml
+                # Replace the tag placeholders
+                sed -i 's|sharmajikechhotebete/mern-app-backend:IMAGE_TAG|sharmajikechhotebete/mern-app-backend:${BUILD_NUMBER}|g' k8s/backend.yaml
+                sed -i 's|sharmajikechhotebete/mern-app-frontend:IMAGE_TAG|sharmajikechhotebete/mern-app-frontend:${BUILD_NUMBER}|g' k8s/frontend.yaml
                 
+                # Apply and Restart
                 kubectl apply -f k8s/ --validate=false
-                
-                # Force restart without the slow 'rollout status' check
                 kubectl rollout restart deployment/frontend deployment/backend
             """
         }
