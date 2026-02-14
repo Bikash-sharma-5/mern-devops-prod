@@ -10,7 +10,7 @@ pipeline {
         BACKEND_IMAGE  = "${DOCKERHUB_USER}/${APP_NAME}-backend:${BUILD_NUMBER}"
         FRONTEND_IMAGE = "${DOCKERHUB_USER}/${APP_NAME}-frontend:${BUILD_NUMBER}"
 
-        BACKEND_URL = "http://a35de4649e77d4657be95b923d8dfe83-311472493.us-east-1.elb.amazonaws.com:5000"
+        BACKEND_URL = "http://backend-service:5000"
     }
 
     stages {
@@ -34,12 +34,14 @@ pipeline {
 
                     sh """
                     docker build \
+                      --no-cache \
                       --build-arg REACT_APP_API_URL=${BACKEND_URL} \
                       -t ${FRONTEND_IMAGE} ./frontend
                     """
 
                     sh """
                     docker build \
+                      --no-cache \
                       -t ${BACKEND_IMAGE} ./backend
                     """
                 }
@@ -53,52 +55,48 @@ pipeline {
                     usernameVariable: 'USER',
                     passwordVariable: 'PASS'
                 )]) {
-                    sh '''
-                    echo "$PASS" | docker login -u "$USER" --password-stdin
-                    '''
+                    sh 'echo "$PASS" | docker login -u "$USER" --password-stdin'
                 }
 
-                retry(3) {
-                    sh "docker push ${BACKEND_IMAGE}"
-                    sh "docker push ${FRONTEND_IMAGE}"
-                }
+                sh "docker push ${BACKEND_IMAGE}"
+                sh "docker push ${FRONTEND_IMAGE}"
             }
         }
 
         stage('Deploy to Kubernetes (EKS)') {
-    steps {
-        withCredentials([aws(
-            credentialsId: 'aws-creds',
-            accessKeyVariable: 'AK',
-            secretKeyVariable: 'SK'
-        )]) {
-            sh """
-            export AWS_ACCESS_KEY_ID=${AK}
-            export AWS_SECRET_ACCESS_KEY=${SK}
-            export AWS_DEFAULT_REGION=${AWS_REGION}
+            steps {
+                withCredentials([aws(
+                    credentialsId: 'aws-creds',
+                    accessKeyVariable: 'AK',
+                    secretKeyVariable: 'SK'
+                )]) {
+                    sh """
+                    export AWS_ACCESS_KEY_ID=${AK}
+                    export AWS_SECRET_ACCESS_KEY=${SK}
+                    export AWS_DEFAULT_REGION=${AWS_REGION}
 
-            aws eks update-kubeconfig \
-              --region ${AWS_REGION} \
-              --name ${CLUSTER_NAME}
+                    aws eks update-kubeconfig \
+                      --region ${AWS_REGION} \
+                      --name ${CLUSTER_NAME}
 
-            kubectl apply -f k8s/
+                    kubectl apply -f k8s/
 
-            # 🔥 THIS IS THE REAL FIX
-            kubectl set image deployment/backend backend=${BACKEND_IMAGE}
-            kubectl set image deployment/frontend frontend=${FRONTEND_IMAGE}
+                    kubectl set image deployment/backend backend=${BACKEND_IMAGE}
+                    kubectl set image deployment/frontend frontend=${FRONTEND_IMAGE}
 
-            kubectl rollout status deployment/backend
-            kubectl rollout status deployment/frontend
-            """
+                    kubectl rollout restart deployment/backend
+                    kubectl rollout restart deployment/frontend
+
+                    kubectl rollout status deployment/backend
+                    kubectl rollout status deployment/frontend
+                    """
+                }
+            }
         }
-    }
-}
-
     }
 
     post {
         always {
-            echo "Cleaning local Docker images..."
             sh "docker rmi ${BACKEND_IMAGE} ${FRONTEND_IMAGE} || true"
         }
 
