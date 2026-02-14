@@ -29,5 +29,7 @@ spec:
         - name: frontend
           # Replace 'sharmajikechhotebete' with your actual DockerHub username
           image: sharmajikechhotebete/mern-app-frontend:IMAGE_TAG
+          imagePullPolicy: Always
+
           ports:
             - containerPort: 80

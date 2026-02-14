@@ -29,8 +29,9 @@ spec:
     spec:
       containers:
         - name: backend
-          image: sharmajikechhotebete/mern-app-backend:latest
+          image: sharmajikechhotebete/mern-app-backend:IMAGE_TAG
           imagePullPolicy: Always
+
           ports:
             - containerPort: 5000
           env:

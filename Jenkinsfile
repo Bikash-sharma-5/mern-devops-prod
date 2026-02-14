@@ -66,36 +66,34 @@ pipeline {
         }
 
         stage('Deploy to Kubernetes (EKS)') {
-            steps {
-                withCredentials([aws(
-                    credentialsId: 'aws-creds',
-                    accessKeyVariable: 'AK',
-                    secretKeyVariable: 'SK'
-                )]) {
-                    sh """
-                    export AWS_ACCESS_KEY_ID=${AK}
-                    export AWS_SECRET_ACCESS_KEY=${SK}
-                    export AWS_DEFAULT_REGION=${AWS_REGION}
+    steps {
+        withCredentials([aws(
+            credentialsId: 'aws-creds',
+            accessKeyVariable: 'AK',
+            secretKeyVariable: 'SK'
+        )]) {
+            sh """
+            export AWS_ACCESS_KEY_ID=${AK}
+            export AWS_SECRET_ACCESS_KEY=${SK}
+            export AWS_DEFAULT_REGION=${AWS_REGION}
 
-                    aws eks update-kubeconfig \
-                      --region ${AWS_REGION} \
-                      --name ${CLUSTER_NAME}
+            aws eks update-kubeconfig \
+              --region ${AWS_REGION} \
+              --name ${CLUSTER_NAME}
 
-                    sed -i 's|IMAGE_TAG|${BUILD_NUMBER}|g' k8s/backend.yaml
-                    sed -i 's|IMAGE_TAG|${BUILD_NUMBER}|g' k8s/frontend.yaml
+            kubectl apply -f k8s/
 
-                    kubectl apply -f k8s/
+            # 🔥 THIS IS THE REAL FIX
+            kubectl set image deployment/backend backend=${BACKEND_IMAGE}
+            kubectl set image deployment/frontend frontend=${FRONTEND_IMAGE}
 
-                    kubectl rollout restart deployment/backend
-                    kubectl rollout restart deployment/frontend
-
-                    echo "Checking rollout status..."
-                    kubectl rollout status deployment/backend || kubectl describe pod -l app=backend
-                    kubectl rollout status deployment/frontend || kubectl describe pod -l app=frontend
-                    """
-                }
-            }
+            kubectl rollout status deployment/backend
+            kubectl rollout status deployment/frontend
+            """
         }
+    }
+}
+
     }
 
     post {
