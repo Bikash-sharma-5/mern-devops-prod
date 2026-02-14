@@ -47,24 +47,28 @@ pipeline {
         }
 
       stage('Deploy to EKS') {
-    steps {
-        withCredentials([aws(accessKeyVariable: 'AK', credentialsId: 'aws-creds', secretKeyVariable: 'SK')]) {
-            sh """
-                export AWS_ACCESS_KEY_ID=${AK}
-                export AWS_SECRET_ACCESS_KEY=${SK}
-                export AWS_DEFAULT_REGION=us-east-1
-                aws eks update-kubeconfig --region us-east-1 --name mern-devops-cluster
-                
-                # Apply the changes
-                kubectl apply -f k8s/ --validate=false
-                
-                # FORCE KUBERNETES TO PULL THE NEW IMAGE VERSION
-                kubectl rollout restart deployment/frontend
-                kubectl rollout status deployment/frontend
-            """
+            steps {
+                withCredentials([aws(accessKeyVariable: 'AK', credentialsId: 'aws-creds', secretKeyVariable: 'SK')]) {
+                    sh """
+                        export AWS_ACCESS_KEY_ID=${AK}
+                        export AWS_SECRET_ACCESS_KEY=${SK}
+                        export AWS_DEFAULT_REGION=us-east-1
+                        aws eks update-kubeconfig --region us-east-1 --name mern-devops-cluster
+                        
+                        # UPDATE IMAGE TAGS IN YAML TO MATCH DOCKER PUSH
+                        sed -i 's|sharmajikechhotebete/mern-app-backend:IMAGE_TAG|${BACKEND_IMAGE}|g' k8s/backend.yaml
+                        sed -i 's|sharmajikechhotebete/mern-app-frontend:IMAGE_TAG|${FRONTEND_IMAGE}|g' k8s/frontend.yaml
+                        
+                        # Apply the changes
+                        kubectl apply -f k8s/ --validate=false
+                        
+                        # Force restart to ensure the new images are pulled immediately
+                        kubectl rollout restart deployment/frontend
+                        kubectl rollout restart deployment/backend
+                    """
+                }
+            }
         }
-    }
-}
     }
 
     post {

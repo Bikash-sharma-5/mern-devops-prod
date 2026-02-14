@@ -30,7 +30,7 @@ spec:
       containers:
         - name: backend
           # Replace 'sharmajikechhotebete' with your actual DockerHub username
-          image: sharmajikechhotebete/mern-backend:IMAGE_TAG
+          image: sharmajikechhotebete/mern-app-backend:IMAGE_TAG
           ports:
             - containerPort: 5000
           env:
