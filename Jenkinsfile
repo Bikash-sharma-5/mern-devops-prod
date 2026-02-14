@@ -33,13 +33,13 @@ pipeline {
                     echo "Building images with API URL: ${BACKEND_URL}"
 
                     sh """
-                    docker build --no-cache \
+                    docker build \
                       --build-arg REACT_APP_API_URL=${BACKEND_URL} \
                       -t ${FRONTEND_IMAGE} ./frontend
                     """
 
                     sh """
-                    docker build --no-cache \
+                    docker build \
                       -t ${BACKEND_IMAGE} ./backend
                     """
                 }
@@ -53,11 +53,14 @@ pipeline {
                     usernameVariable: 'USER',
                     passwordVariable: 'PASS'
                 )]) {
-                    sh """
-                    echo $PASS | docker login -u $USER --password-stdin
-                    docker push ${BACKEND_IMAGE}
-                    docker push ${FRONTEND_IMAGE}
-                    """
+                    sh '''
+                    echo "$PASS" | docker login -u "$USER" --password-stdin
+                    '''
+                }
+
+                retry(3) {
+                    sh "docker push ${BACKEND_IMAGE}"
+                    sh "docker push ${FRONTEND_IMAGE}"
                 }
             }
         }
@@ -78,7 +81,6 @@ pipeline {
                       --region ${AWS_REGION} \
                       --name ${CLUSTER_NAME}
 
-                    # Inject new image tags dynamically
                     sed -i 's|IMAGE_TAG|${BUILD_NUMBER}|g' k8s/backend.yaml
                     sed -i 's|IMAGE_TAG|${BUILD_NUMBER}|g' k8s/frontend.yaml
 
@@ -87,8 +89,9 @@ pipeline {
                     kubectl rollout restart deployment/backend
                     kubectl rollout restart deployment/frontend
 
-                    kubectl rollout status deployment/backend
-                    kubectl rollout status deployment/frontend
+                    echo "Checking rollout status..."
+                    kubectl rollout status deployment/backend || kubectl describe pod -l app=backend
+                    kubectl rollout status deployment/frontend || kubectl describe pod -l app=frontend
                     """
                 }
             }
