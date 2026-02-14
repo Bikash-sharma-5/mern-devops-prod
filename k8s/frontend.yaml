@@ -16,7 +16,7 @@ kind: Deployment
 metadata:
   name: frontend
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
       app: frontend
@@ -28,6 +28,6 @@ spec:
       containers:
         - name: frontend
           # Replace 'sharmajikechhotebete' with your actual DockerHub username
-          image: sharmajikechhotebete/mern-frontend:IMAGE_TAG
+          image: sharmajikechhotebete/mern-app-frontend:IMAGE_TAG
           ports:
             - containerPort: 80
