@@ -8,7 +8,7 @@ function App() {
   const [loading, setLoading] = useState(false);
 
   // Use environment variable for production readiness
-  const API = process.env.REACT_APP_API_URL || "http://localhost:5000/api/tasks";
+  const API = process.env.REACT_APP_API_URL ;
 
   const getTasks = async () => {
     try {

@@ -1,19 +1,18 @@
-# --- Stage 1: Build the React App ---
-FROM node:18-alpine as build-stage
+# Build Stage
+FROM node:18-alpine AS build-stage
 WORKDIR /app
 COPY package*.json ./
 RUN npm install
 COPY . .
+
+# Add these lines to accept the new URL during build
+ARG REACT_APP_API_URL
+ENV REACT_APP_API_URL=$REACT_APP_API_URL
+
 RUN npm run build
 
-# --- Stage 2: Serve with Nginx ---
+# Production Stage
 FROM nginx:stable-alpine
-
-# Copy the build output from the previous stage to Nginx
 COPY --from=build-stage /app/build /usr/share/nginx/html
-
-# Expose port 80 for the web traffic
 EXPOSE 80
-
-# Start Nginx
 CMD ["nginx", "-g", "daemon off;"]

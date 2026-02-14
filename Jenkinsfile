@@ -21,17 +21,20 @@ pipeline {
             }
         }
 
-        stage('Docker Build') {
-            steps {
-                script {
-                    echo "Building Backend Image..."
-                    sh "docker build -t ${BACKEND_IMAGE} ./backend"
-                    
-                    echo "Building Frontend Image..."
-                    sh "docker build -t ${FRONTEND_IMAGE} ./frontend"
-                }
-            }
+       stage('Docker Build') {
+    steps {
+        script {
+            // Get your Backend LoadBalancer URL (remove 'http://' if your code adds it)
+            def backendUrl = "http://a35de4649e77d4657be95b923d8dfe83-311472493.us-east-1.elb.amazonaws.com:5000"
+            
+            echo "Building Frontend Image with API URL: ${backendUrl}"
+            sh "docker build --build-arg REACT_APP_API_URL=${backendUrl} -t sharmajikechhotebete/mern-app-frontend:${BUILD_NUMBER} ./frontend"
+            
+            echo "Building Backend Image..."
+            sh "docker build -t sharmajikechhotebete/mern-app-backend:${BUILD_NUMBER} ./backend"
         }
+    }
+}
 
         stage('Push to Docker Hub') {
             steps {

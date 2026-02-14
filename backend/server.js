@@ -4,7 +4,9 @@ const cors = require('cors');
 require('dotenv').config();
 
 const app = express();
-app.use(cors());
+app.use(cors({
+  origin: '*' // In production, you should replace '*' with your Frontend LoadBalancer URL
+}));
 app.use(express.json());
 
 // Task Schema
