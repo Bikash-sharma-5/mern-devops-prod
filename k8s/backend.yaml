@@ -3,7 +3,7 @@ kind: Service
 metadata:
   name: backend-service
 spec:
-  type: LoadBalancer  # Change this from ClusterIP to LoadBalancer
+  type: ClusterIP
   selector:
     app: backend
   ports:
@@ -29,8 +29,8 @@ spec:
     spec:
       containers:
         - name: backend
-          # Replace 'sharmajikechhotebete' with your actual DockerHub username
-          image: sharmajikechhotebete/mern-app-backend:IMAGE_TAG
+          image: sharmajikechhotebete/mern-app-backend:latest
+          imagePullPolicy: Always
           ports:
             - containerPort: 5000
           env:
