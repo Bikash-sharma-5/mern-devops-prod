@@ -48,24 +48,19 @@ pipeline {
 
       stage('Deploy to EKS') {
     steps {
-        withCredentials([aws(credentialsId: 'aws-creds', accessKeyVariable: 'AK', secretKeyVariable: 'SK')]) {
+        withCredentials([aws(accessKeyVariable: 'AK', credentialsId: 'aws-creds', secretKeyVariable: 'SK')]) {
             sh """
                 export AWS_ACCESS_KEY_ID=${AK}
                 export AWS_SECRET_ACCESS_KEY=${SK}
                 export AWS_DEFAULT_REGION=us-east-1
-
-                # 1. Force identify check - this must show user/DEVOPS in logs
-                aws sts get-caller-identity
-
-                # 2. Update kubeconfig with the specific 'aws' authenticator
                 aws eks update-kubeconfig --region us-east-1 --name mern-devops-cluster
-
-                # 3. Update the YAMLs
-                sed -i 's|sharmajikechhotebete/mern-backend:IMAGE_TAG|sharmajikechhotebete/mern-app-backend:${BUILD_NUMBER}|g' k8s/backend.yaml
-                sed -i 's|sharmajikechhotebete/mern-frontend:IMAGE_TAG|sharmajikechhotebete/mern-app-frontend:${BUILD_NUMBER}|g' k8s/frontend.yaml
-
-                # 4. Apply with the --validate=false flag
+                
+                # Apply the changes
                 kubectl apply -f k8s/ --validate=false
+                
+                # FORCE KUBERNETES TO PULL THE NEW IMAGE VERSION
+                kubectl rollout restart deployment/frontend
+                kubectl rollout status deployment/frontend
             """
         }
     }
