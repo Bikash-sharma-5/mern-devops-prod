@@ -5,6 +5,8 @@ metadata:
 spec:
   accessModes:
     - ReadWriteOnce
+  # Added the standard AWS StorageClass
+  storageClassName: gp2
   resources:
     requests:
       storage: 5Gi
@@ -14,19 +16,24 @@ kind: Service
 metadata:
   name: mongodb
 spec:
-  ports:
-    - port: 27017
   selector:
     app: mongodb
+  ports:
+    - protocol: TCP
+      port: 27017
+      targetPort: 27017
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: mongodb
 spec:
+  # Matches the pod label below
   selector:
     matchLabels:
       app: mongodb
+  strategy:
+    type: Recreate
   template:
     metadata:
       labels:

@@ -11,7 +11,7 @@ data:
         - system:bootstrappers
         - system:nodes
   mapUsers: |
-    - userarn: arn:aws:iam::442042511786:user/DEVOPS
+    - userarn: arn:aws:iam::442042511786:user/Bikash
       username: jenkins-worker
       groups:
         - system:masters
