@@ -31,6 +31,7 @@ console.log("FINAL ATTEMPT API URL:", API);
   const add = async (e) => {
     e.preventDefault();
     if (!input) return;
+    console.log("API Endpoint:", API);
     setLoading(true);
     try {
       await axios.post(API, { title: input });
