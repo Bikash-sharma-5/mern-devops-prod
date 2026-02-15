@@ -4,6 +4,10 @@ const cors = require('cors');
 require('dotenv').config();
 
 const app = express();
+const client = require('prom-client');
+
+// Collect default metrics (CPU, memory, event loop)
+client.collectDefaultMetrics();
 app.use(cors({
   origin: [
     'http://a9126bcfccd0f41e1822255e22dd5a2d-1170289972.us-east-1.elb.amazonaws.com', // Your Frontend URL
@@ -12,6 +16,13 @@ app.use(cors({
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   credentials: true
 }));
+// Metrics endpoint
+app.get('/metrics', async (req, res) => {
+  res.set('Content-Type', client.register.contentType);
+  res.end(await client.register.metrics());
+});
+
+
 app.use(express.json());
 
 // Task Schema
