@@ -10,7 +10,7 @@ function App() {
   // Fallback to localhost only if the environment variable is missing during build
   // We append /api/tasks here so you don't have to repeat it in every axios call
   // Replace your API definition with this:
-const BASE_URL = process.env.REACT_APP_API_URL || "http://backend-service:5000";
+const BASE_URL = process.env.REACT_APP_API_URL || "http://aa3631b76df4444a49ed5a415694e17a-801271181.us-east-1.elb.amazonaws.com:5000";
 const API = `${BASE_URL}/api/tasks`;
 
 console.log("FINAL ATTEMPT API URL:", API);
