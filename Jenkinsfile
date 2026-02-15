@@ -10,7 +10,7 @@ pipeline {
         BACKEND_IMAGE  = "${DOCKERHUB_USER}/${APP_NAME}-backend:${BUILD_NUMBER}"
         FRONTEND_IMAGE = "${DOCKERHUB_USER}/${APP_NAME}-frontend:${BUILD_NUMBER}"
 
-        BACKEND_URL = "http://backend-service:5000"
+        BACKEND_URL = "http://aa3631b76df4444a49ed5a415694e17a-801271181.us-east-1.elb.amazonaws.com:5000"
     }
 
     stages {
