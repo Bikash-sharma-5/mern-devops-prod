@@ -21,11 +21,11 @@ const Task = mongoose.model('Task', new mongoose.Schema({
 }));
 
 // Connect to MongoDB (using the service name 'database' from docker-compose)
-const MONGO_URI = process.env.MONGO_URI || 'mongodb://database:27017/tasks';
+const MONGO_URI = process.env.MONGO_URI || 'mongodb://mongodb:27017/tasks';
 mongoose.connect(MONGO_URI)
   .then(() => console.log("✅ MongoDB Connected"))
   .catch(err => console.error("❌ DB Connection Error:", err));
-
+app.get('/', (req, res) => res.status(200).send('Pre-DB Check OK'));
 // Routes
 app.get('/api/tasks', async (req, res) => res.json(await Task.find()));
 app.post('/api/tasks', async (req, res) => {
