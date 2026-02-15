@@ -93,44 +93,6 @@ pipeline {
                 }
             }
         }
-
-       stage('Deploy Monitoring Stack') {
-    agent {
-        docker {
-            image 'alpine/helm:3.12.3'
-            args '--entrypoint=""'
-        }
-    }
-    steps {
-        withCredentials([aws(credentialsId: 'aws-creds', accessKeyVariable: 'AK', secretKeyVariable: 'SK')]) {
-            sh """
-            export AWS_ACCESS_KEY_ID=${AK}
-            export AWS_SECRET_ACCESS_KEY=${SK}
-            export AWS_DEFAULT_REGION=us-east-1
-
-            aws eks update-kubeconfig --region us-east-1 --name mern-devops-cluster
-
-            kubectl create namespace monitoring || true
-
-            helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
-            helm repo update
-
-            helm upgrade --install prometheus prometheus-community/prometheus \
-                --namespace monitoring \
-                --set alertmanager.persistentVolume.storageClass="gp2" \
-                --set server.persistentVolume.storageClass="gp2" \
-                --set server.service.type=LoadBalancer
-
-            helm upgrade --install grafana prometheus-community/grafana \
-                --namespace monitoring \
-                --set adminPassword='admin' \
-                --set service.type=LoadBalancer
-            """
-        }
-    }
-}
-
-
     }
 
     post {
