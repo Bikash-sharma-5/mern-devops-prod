@@ -95,50 +95,38 @@ pipeline {
         }
 
         stage('Deploy Monitoring Stack') {
-            agent {
-                docker {
-                    image 'alpine/helm:3.12.3'  // Docker image with Helm preinstalled
-                    args '-v /var/run/docker.sock:/var/run/docker.sock'
-                }
-            }
-            steps {
-                withCredentials([aws(
-                    credentialsId: 'aws-creds',
-                    accessKeyVariable: 'AK',
-                    secretKeyVariable: 'SK'
-                )]) {
-                    sh """
-                    export AWS_ACCESS_KEY_ID=${AK}
-                    export AWS_SECRET_ACCESS_KEY=${SK}
-                    export AWS_DEFAULT_REGION=${AWS_REGION}
+    steps {
+        withCredentials([aws(
+            credentialsId: 'aws-creds',
+            accessKeyVariable: 'AK',
+            secretKeyVariable: 'SK'
+        )]) {
+            sh """
+            export AWS_ACCESS_KEY_ID=${AK}
+            export AWS_SECRET_ACCESS_KEY=${SK}
+            export AWS_DEFAULT_REGION=${AWS_REGION}
 
-                    aws eks update-kubeconfig \
-                      --region ${AWS_REGION} \
-                      --name ${CLUSTER_NAME}
+            aws eks update-kubeconfig --region ${AWS_REGION} --name ${CLUSTER_NAME}
 
-                    # Create monitoring namespace
-                    kubectl create namespace monitoring || true
+            kubectl create namespace monitoring || true
 
-                    # Add Helm repo and update
-                    helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
-                    helm repo update
+            helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+            helm repo update
 
-                    # Install Prometheus stack
-                    helm upgrade --install prometheus prometheus-community/prometheus \
-                        --namespace monitoring \
-                        --set alertmanager.persistentVolume.storageClass="gp2" \
-                        --set server.persistentVolume.storageClass="gp2" \
-                        --set server.service.type=LoadBalancer
+            helm upgrade --install prometheus prometheus-community/prometheus \
+                --namespace monitoring \
+                --set alertmanager.persistentVolume.storageClass="gp2" \
+                --set server.persistentVolume.storageClass="gp2" \
+                --set server.service.type=LoadBalancer
 
-                    # Install Grafana (optional, included in Prometheus chart usually)
-                    helm upgrade --install grafana prometheus-community/grafana \
-                        --namespace monitoring \
-                        --set adminPassword='admin' \
-                        --set service.type=LoadBalancer
-                    """
-                }
-            }
+            helm upgrade --install grafana prometheus-community/grafana \
+                --namespace monitoring \
+                --set adminPassword='admin' \
+                --set service.type=LoadBalancer
+            """
         }
+    }
+}
 
     }
 
