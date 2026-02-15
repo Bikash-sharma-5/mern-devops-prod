@@ -130,7 +130,7 @@ footer {
   color: #64748b;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
 }
 
 .status-dot {
